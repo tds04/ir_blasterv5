@@ -12,7 +12,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import (
     CONF_DEVICE_NAME,
     CONF_TOPIC,
-    DEFAULT_CODE_NAME_PLACEHOLDER,
     DOMAIN,
 )
 from .button import _send_ir
@@ -60,7 +59,7 @@ class CodeNameText(IRBaseText):
         super().__init__(hass, entry, topic)
         self._attr_name = "Code Name"
         self._attr_unique_id = f"{DOMAIN}_{topic}_code_name"
-        self._attr_native_value = DEFAULT_CODE_NAME_PLACEHOLDER
+        self._attr_native_value = ""
         self._attr_icon = "mdi:label-outline"
 
     async def async_set_value(self, value: str) -> None:

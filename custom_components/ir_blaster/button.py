@@ -14,7 +14,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import (
     CONF_DEVICE_NAME,
     CONF_TOPIC,
-    DEFAULT_CODE_NAME_PLACEHOLDER,
     DOMAIN,
     STATE_ARMED,
     STATE_IDLE,
@@ -49,7 +48,6 @@ async def async_setup_entry(
 
     entities: list[ButtonEntity] = [
         LearnButton(hass, entry, topic, learning_session),
-        SendLastButton(hass, entry, topic, learning_session),
     ]
 
     for code in storage.get_codes():
@@ -94,7 +92,7 @@ class LearnButton(IRBaseButton):
         if not entity_id:
             return None
         state = self._hass.states.get(entity_id)
-        if not state or state.state in ("", "unavailable", "unknown", DEFAULT_CODE_NAME_PLACEHOLDER):
+        if not state or state.state in ("", "unavailable", "unknown"):
             return None
         return state.state.strip() or None
 
@@ -104,7 +102,7 @@ class LearnButton(IRBaseButton):
         if entity_id:
             await self._hass.services.async_call(
                 "text", "set_value",
-                {"entity_id": entity_id, "value": DEFAULT_CODE_NAME_PLACEHOLDER},
+                {"entity_id": entity_id, "value": ""},
             )
 
     async def async_press(self) -> None:
@@ -158,36 +156,6 @@ class LearnButton(IRBaseButton):
         finally:
             self._learning_session.unregister_callback(self._on_state_change)
             self._pending_name = None
-
-
-class SendLastButton(IRBaseButton):
-    def __init__(self, hass, entry, topic, learning_session: LearningSession):
-        super().__init__(hass, entry, topic)
-        self._learning_session = learning_session
-        self._attr_name = "Send Last Captured"
-        self._attr_unique_id = f"{DOMAIN}_{topic}_send_last"
-        self._attr_icon = "mdi:send"
-        self._sensor_unique_id = f"{DOMAIN}_{topic}_captured_code"
-
-    def _get_last_code(self) -> str | None:
-        code = self._learning_session.pending_code
-        if code:
-            return code.hex_code
-        registry = er.async_get(self._hass)
-        sensor_id = registry.async_get_entity_id("sensor", DOMAIN, self._sensor_unique_id)
-        if not sensor_id:
-            return None
-        state = self._hass.states.get(sensor_id)
-        if not state or state.state in ("unknown", "unavailable", ""):
-            return None
-        return state.state
-
-    async def async_press(self) -> None:
-        raw = self._get_last_code()
-        if not raw:
-            _LOGGER.warning("Send Last: no code available")
-            return
-        await _send_ir(self._hass, self._topic, raw)
 
 
 class IRCodeButton(IRBaseButton):
